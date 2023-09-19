@@ -1,13 +1,13 @@
 /**********************************************************************************
  *  TITLE: IoT-based Water Level Indicator 
  *  Umesh Yaduwanshi_Project
- *  Download Board ESP8266 (3.1.1) : https://github.com/espressif/arduino-esp32 https://github.com/espressif/arduino-esp32.git
+ *  Download Board ESP8266 (3.1.1): https://github.com/espressif/arduino-esp32 https://github.com/espressif/arduino-esp32.git
  *  Download the libraries 
  *  Blynk Library (1.1.0):  https://github.com/blynkkk/blynk-library
  *  Adafruit_SSD1306 Library (2.5.7): https://github.com/adafruit/Adafruit_SSD1306
  *  AceButton Library (1.9.2): https://github.com/bxparks/AceButton
  **********************************************************************************/
- 
+
 /* Fill-in your Template ID (only if using Blynk.Cloud) */
 #define BLYNK_TEMPLATE_ID "TMPL3cp9lz_YI"
 #define BLYNK_TEMPLATE_NAME "ESP32 Water Level"
@@ -18,12 +18,12 @@
 char ssid[] = "vivo_1907";   //WiFi Name
 char pass[] = "09876543";   //WiFi Password
 
-//Set Water Level Distance in CM
+// Set Water Level Distance in CM
 int emptyTankDistance = 70 ;  //Distance when tank is empty
 int fullTankDistance =  30 ;  //Distance when tank is full (must be greater than 25cm)
 
-//Set trigger value in percentage
-int triggerPer =   10 ;  //alarm/pump will start when water level drop below triggerPer
+// Set trigger value in percentage
+int triggerPer =   10 ;  //alarm/pump will start when water level drops below triggerPer
 
 #include <Adafruit_SSD1306.h>
 #include <ESP8266WiFi.h>        
@@ -41,7 +41,7 @@ using namespace ace_button;
 #define ButtonPin2 10  //SD3  //Relay
 #define ButtonPin3 D4  //D4   //STOP Buzzer
 
-//Change the virtual pins according the rooms
+// Change the virtual pins according to the rooms
 #define VPIN_BUTTON_1    V1 
 #define VPIN_BUTTON_2    V2
 #define VPIN_BUTTON_3    V3 
@@ -58,9 +58,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 float duration;
 float distance;
 int   waterLevelPer;
-bool  toggleBuzzer = HIGH; //Define to remember the toggle state
+bool  toggleBuzzer = HIGH; // Define to remember the toggle state
 
-bool toggleRelay = false; //Define the toggle state for relay
+bool toggleRelay = false; // Define the toggle state for relay
 bool modeFlag = true;
 String currMode;
 
@@ -105,14 +105,9 @@ BLYNK_WRITE(VPIN_BUTTON_3) {
 }
 
 BLYNK_WRITE(VPIN_BUTTON_4) {
-  if(!modeFlag){
-    toggleRelay = param.asInt();
-    digitalWrite(RelayPin, toggleRelay);
-    controlBuzzer(500);
-  }
-  else{
-    Blynk.virtualWrite(VPIN_BUTTON_4, toggleRelay);
-  }
+  int relayState = param.asInt();
+  digitalWrite(RelayPin, relayState);
+  toggleRelay = relayState;
 }
 
 BLYNK_WRITE(VPIN_BUTTON_5) {
@@ -160,26 +155,21 @@ void measureDistance(){
   duration = pulseIn(ECHOPIN, HIGH);
  
   // Determine distance from duration
-  // Use 343 metres per second as speed of sound
+  // Use 343 meters per second as the speed of sound
   // Divide by 1000 as we want millimeters
  
-  distance = ((duration / 2) * 0.343)/10;
+  distance = ((duration / 2) * 0.343) / 10;
 
-  if (distance > (fullTankDistance - 10)  && distance < emptyTankDistance ){
+  if (distance > (fullTankDistance - 10) && distance < emptyTankDistance ){
     waterLevelPer = map((int)distance ,emptyTankDistance, fullTankDistance, 0, 100);
     Blynk.virtualWrite(VPIN_BUTTON_1, waterLevelPer);
     Blynk.virtualWrite(VPIN_BUTTON_2, (String(distance) + " cm"));
-
-    // Print result to serial monitor
-//    Serial.print("Distance: ");
-//    Serial.print(distance);
-//    Serial.println(" cm");
 
     if (waterLevelPer < triggerPer){
       if(modeFlag){
         if(!toggleRelay){
           controlBuzzer(500);
-          digitalWrite(RelayPin, HIGH); //turn on relay
+          digitalWrite(RelayPin, HIGH); // Turn on relay
           toggleRelay = true;
           Blynk.virtualWrite(VPIN_BUTTON_4, toggleRelay);
         } 
@@ -194,7 +184,7 @@ void measureDistance(){
     if (distance < fullTankDistance){
       if(modeFlag){
         if(toggleRelay){
-          digitalWrite(RelayPin, LOW); //turn off relay
+          digitalWrite(RelayPin, LOW); // Turn off relay
           toggleRelay = false;
           Blynk.virtualWrite(VPIN_BUTTON_4, toggleRelay);
           controlBuzzer(500);
@@ -227,7 +217,7 @@ void setup() {
   // Set up serial monitor
   Serial.begin(9600);
  
-  // Set pinmodes for sensor connections
+  // Set pin modes for sensor connections
   pinMode(ECHOPIN, INPUT);
   pinMode(TRIGPIN, OUTPUT);
   pinMode(wifiLed, OUTPUT);
@@ -262,8 +252,8 @@ void setup() {
   display.clearDisplay();
 
   WiFi.begin(ssid, pass);
-  timer.setInterval(2000L, checkBlynkStatus); // check if Blynk server is connected every 2 seconds
-  timer.setInterval(1000L,  measureDistance); // measure water level every 1 seconds
+  timer.setInterval(2000L, checkBlynkStatus); // Check if Blynk server is connected every 2 seconds
+  timer.setInterval(1000L, measureDistance); // Measure water level every 1 second
   Blynk.config(auth);
   delay(1000);
   
@@ -273,26 +263,27 @@ void setup() {
   
   delay(500);
 }
- void loop() {
+ 
+void loop() {
   
   Blynk.run();
   timer.run(); // Initiates SimpleTimer
 
-  button1.check(); //mode change
-  button3.check(); //buzzer reset
+  button1.check(); // Mode change
+  button3.check(); // Buzzer reset
 
-  if(!modeFlag){  //if in manual mode
+  if(!modeFlag){  // If in manual mode
     button2.check();
   }
    
 }
+
 void button1Handler(AceButton* button, uint8_t eventType, uint8_t buttonState) {
   Serial.println("EVENT1");
   switch (eventType) {
     case AceButton::kEventReleased:
-      //Serial.println("kEventReleased");
       if(modeFlag && toggleRelay){
-        digitalWrite(RelayPin, LOW);  //turn off the pump
+        digitalWrite(RelayPin, LOW);  // Turn off the pump
         toggleRelay = false;
         controlBuzzer(500);
       }
@@ -308,13 +299,12 @@ void button2Handler(AceButton* button, uint8_t eventType, uint8_t buttonState) {
   Serial.println("EVENT2");
   switch (eventType) {
     case AceButton::kEventReleased:
-      //Serial.println("kEventReleased");     
       if(toggleRelay){
-        digitalWrite(RelayPin, LOW);  //turn off the pump
+        digitalWrite(RelayPin, LOW);  // Turn off the pump
         toggleRelay = false;
       }
       else{
-        digitalWrite(RelayPin, HIGH);  //turn on the pump
+        digitalWrite(RelayPin, HIGH);  // Turn on the pump
         toggleRelay = true;
       }
       Blynk.virtualWrite(VPIN_BUTTON_4, toggleRelay);
@@ -328,7 +318,6 @@ void button3Handler(AceButton* button, uint8_t eventType, uint8_t buttonState) {
   Serial.println("EVENT3");
   switch (eventType) {
     case AceButton::kEventReleased:
-      //Serial.println("kEventReleased");
       digitalWrite(BuzzerPin, LOW);
       toggleBuzzer = LOW;
       Blynk.virtualWrite(VPIN_BUTTON_5, toggleBuzzer);
